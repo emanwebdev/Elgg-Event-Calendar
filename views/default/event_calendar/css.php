@@ -258,13 +258,19 @@ li.event-calendar-filter-menu-show-only {
 	color: #000000;
 }
 
-.event-calendar-edit-date-wrapper {
+.event-calendar-edit-date-wrapper, .event-calendar-edit-all-day-date-wrapper {
 	clear: both;
 	margin-left: 20px;
+	display: none;
 }
 
 .event-calendar-edit-reminder-wrapper {
 	margin-top: 10px;
+	display: none;
+}
+
+.event-calendar-edit-form-membership-block, .event-calendar-edit-form-share-block {
+	display: none;
 }
 
 .event-calendar-description {
@@ -278,4 +284,9 @@ li.event-calendar-filter-menu-show-only {
 
 .event-calendar-date-selected {
 	background-color: #DDDDFF;
+}
+
+.event-calendar-repeat-section {
+  padding-top: 15px;
+  clear: both;
 }

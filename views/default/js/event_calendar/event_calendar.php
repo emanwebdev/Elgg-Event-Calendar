@@ -10,37 +10,41 @@ elgg.event_calendar.init = function () {
 	$('.event-calendar-repeating-unselected').live('click',elgg.event_calendar.handleRepeatingSelect);
 	$('.event-calendar-repeating-selected').live('click',elgg.event_calendar.handleRepeatingUnselect);
 	$('#event-calendar-edit').submit(elgg.event_calendar.handleEditFormSubmit);
-	$('#event-calendar-edit-schedule-type').click(elgg.event_calendar.handleScheduleType);
+	$('.event-calendar-edit-schedule-type').click(elgg.event_calendar.handleScheduleType);
 	elgg.event_calendar.handleScheduleType();
 
 	var all_day_field = $('[name="all_day"][type="checkbox"]');
 	if (all_day_field.is(':checked')) {
-		$('[name="start_time"]').val(0);
-		$('[name="start_time"]').attr('disabled','disabled');
-		$('[name="end_time"]').val(0);
-		$('[name="end_time"]').attr('disabled','disabled');
+		//$('[name="start_time"]').val(0);
+		$('#event-calendar-start-time-wrapper').attr('disabled','disabled');
+		//$('[name="end_time"]').val(0);
+		$('#event-calendar-end-time-wrapper').attr('disabled','disabled');
 	}
 	all_day_field.change(elgg.event_calendar.handleAllDayField);
 }
 
 elgg.event_calendar.handleScheduleType = function(e) {
-	var st = $('#event-calendar-edit-schedule-type:checked').val();
+	var st = $("[name='schedule_type']:checked").val();
 	if (st == 'poll') {
 		$(".event-calendar-edit-date-wrapper").hide();
 		$(".event-calendar-edit-reminder-wrapper").hide();
 		$(".event-calendar-edit-form-membership-block").hide();
 		$(".event-calendar-edit-form-share-block").hide();
+		$("[name='start_date_for_all_day']").hide();
 	} else {
-		$(".event-calendar-edit-date-wrapper").show();
 		$(".event-calendar-edit-reminder-wrapper").show();
 		$(".event-calendar-edit-form-membership-block").show();
 		$(".event-calendar-edit-form-share-block").show();
 		if (st == 'all_day') {
-			$("[name='start_time']").hide();
-			$("#event-calendar-to-time-wrapper").hide();
+			$(".event-calendar-edit-date-wrapper").hide();
+			$("#event-calendar-start-time-wrapper").hide();
+			$("#event-calendar-end-time-wrapper").hide();
+			$(".event-calendar-edit-all-day-date-wrapper").show();
 		} else {
-			$("[name='start_time']").show();
-			$("#event-calendar-to-time-wrapper").show();
+			$(".event-calendar-edit-date-wrapper").show();
+			$("#event-calendar-start-time-wrapper").show();
+			$("#event-calendar-end-time-wrapper").show();
+			$(".event-calendar-edit-all-day-date-wrapper").hide();
 		}
 	}
 }

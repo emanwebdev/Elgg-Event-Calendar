@@ -16,9 +16,9 @@ elgg_register_event_handler('init','system','event_calendar_init');
 function event_calendar_init() {
 
 	elgg_register_library('elgg:event_calendar', elgg_get_plugins_path() . 'event_calendar/models/model.php');
-	
+
 	elgg_register_plugin_hook_handler('cron', 'fiveminute', 'event_calendar_handle_reminders_cron',400);
-		
+
 	// Register a page handler, so we can have nice URLs
 	elgg_register_page_handler('event_calendar','event_calendar_page_handler');
 
@@ -27,7 +27,7 @@ function event_calendar_init() {
 
 	// Register granular notification for this type
 	register_notification_object('object', 'event_calendar', elgg_echo('event_calendar:new_event'));
-		
+
 	// Set up site menu
 	$site_calendar = elgg_get_plugin_setting('site_calendar', 'event_calendar');
 	if (!$site_calendar || $site_calendar != 'no') {
@@ -42,9 +42,10 @@ function event_calendar_init() {
 	if (function_exists('elgg_register_tag_metadata_name')) {
 		elgg_register_tag_metadata_name('event_tags');
 	}
-	
+
 	// register the plugin's JavaScript
 	$plugin_js = elgg_get_simplecache_url('js', 'event_calendar/event_calendar');
+	elgg_register_simplecache_view('js/event_calendar/event_calendar');
 	elgg_register_js('elgg.event_calendar', $plugin_js);
 
 	//add to group profile page
@@ -64,16 +65,17 @@ function event_calendar_init() {
 
 	//add to the css
 	elgg_extend_view('css/elgg', 'event_calendar/css');
-	
+
 	$event_calendar_listing_format = elgg_get_plugin_setting('listing_format', 'event_calendar');
-	if (elgg_plugin_exists('event_poll') || ($event_calendar_listing_format == 'full')) {
+	if (elgg_is_active_plugin('event_poll') || ($event_calendar_listing_format == 'full')) {
 		elgg_extend_view('css/elgg', 'fullcalendar/css');
 		$plugin_js = elgg_get_simplecache_url('js', 'event_calendar/fullcalendar');
+		elgg_register_simplecache_view('js/event_calendar/fullcalendar');
 		elgg_register_js('elgg.full_calendar', $plugin_js);
 	}
 
 	//add a widget
-	elgg_register_widget_type('event_calendar',elgg_echo("event_calendar:widget_title"),elgg_echo('event_calendar:widget:description'));
+	elgg_register_widget_type('event_calendar',elgg_echo("event_calendar:widget_title"),elgg_echo('event_calendar:widget:description'), 'all,groups');
 
 	// add the event calendar group tool option
 	$event_calendar_group_default = elgg_get_plugin_setting('group_default', 'event_calendar');
@@ -88,7 +90,7 @@ function event_calendar_init() {
 		elgg_register_event_handler('join', 'group', 'event_calendar_handle_join');
 		elgg_register_event_handler('leave', 'group', 'event_calendar_handle_leave');
 	}
-	
+
 	// entity menu
 	elgg_register_plugin_hook_handler('register', 'menu:entity', 'event_calendar_entity_menu_setup');
 	elgg_register_plugin_hook_handler('prepare', 'menu:entity', 'event_calendar_entity_menu_prepare');
@@ -110,7 +112,7 @@ function event_calendar_init() {
 	elgg_register_action("event_calendar/remove_from_group_members","$action_path/remove_from_group_members.php");
 	elgg_register_action("event_calendar/manage_subscribers","$action_path/manage_subscribers.php");
 	elgg_register_action("event_calendar/modify_full_calendar","$action_path/modify_full_calendar.php");
-
+	elgg_register_action("event_calendar/join_conference","$action_path/join_conference.php");
 }
 
 /**
@@ -293,12 +295,12 @@ function event_calendar_entity_menu_setup($hook, $type, $return, $params) {
 	if ($handler != 'event_calendar') {
 		return $return;
 	}
-	if (elgg_plugin_exists('event_poll') && $entity->canEdit() && $entity->schedule_type == 'poll') {
+	if (elgg_is_active_plugin('event_poll') && $entity->canEdit() && $entity->schedule_type == 'poll') {
 		$options = array(
 			'name' => 'schedule',
 			'text' => elgg_echo('event_poll:schedule_button'),
 			'title' => elgg_echo('event_poll:schedule_button'),
-			'href' => 'event_poll/schedule/'.$entity->guid,
+			'href' => 'event_poll/vote/'.$entity->guid,
 			'priority' => 150,
 		);
 		$return[] = ElggMenuItem::factory($options);
@@ -337,17 +339,17 @@ function event_calendar_entity_menu_setup($hook, $type, $return, $params) {
 					'priority' => 150,
 				);
 				$return[] = ElggMenuItem::factory($options);
-			}		
+			}
 		}
 	}
-	
+
 	$count = event_calendar_get_users_for_event($entity->guid,0,0,true);
 	if ($count == 1) {
 		$calendar_text = elgg_echo('event_calendar:personal_event_calendars_link_one');
-	} else {	
+	} else {
 		$calendar_text = elgg_echo('event_calendar:personal_event_calendars_link',array($count));
 	}
-	
+
 	$options = array(
 		'name' => 'calendar_listing',
 		'text' => $calendar_text,
@@ -356,7 +358,7 @@ function event_calendar_entity_menu_setup($hook, $type, $return, $params) {
 		'priority' => 150,
 	);
 	$return[] = ElggMenuItem::factory($options);
-	
+
 	/*if (elgg_is_admin_logged_in() && (elgg_get_plugin_setting('allow_featured', 'event_calendar') == 'yes')) {
 		if ($event->featured) {
 			add_submenu_item(elgg_echo('event_calendar:unfeature'), $CONFIG->url . "action/event_calendar/unfeature?event_id=".$event_id.'&'.event_calendar_security_fields(), 'eventcalendaractions');
@@ -380,12 +382,13 @@ function event_calendar_entity_menu_prepare($hook, $type, $return, $params) {
 			}
 		}
 		$return['default'] = $new_return;
-	}	
-	
+	}
+
 	return $return;
 }
 
 function event_calendar_handle_join($event, $object_type, $object) {
+	elgg_load_library('elgg:event_calendar');
 	$group = $object['group'];
 	$user = $object['user'];
 	$user_guid = $user->getGUID();
@@ -397,6 +400,7 @@ function event_calendar_handle_join($event, $object_type, $object) {
 }
 
 function event_calendar_handle_leave($event, $object_type, $object) {
+	elgg_load_library('elgg:event_calendar');
 	$group = $object['group'];
 	$user = $object['user'];
 	$user_guid = $user->getGUID();
@@ -411,3 +415,11 @@ function event_calendar_handle_reminders_cron() {
 	elgg_load_library('elgg:event_calendar');
 	event_calendar_queue_reminders();
 }
+
+function event_calendar_invalidate_cache($hook, $type, $return, $params){
+  if(isset($params["plugin"]) && ($params["plugin"]->getID() == "event_calendar")){
+    elgg_invalidate_simplecache();
+  }
+}
+
+elgg_register_plugin_hook_handler("setting", "plugin", "event_calendar_invalidate_cache");
